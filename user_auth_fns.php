@@ -127,4 +127,44 @@ function reset_password($username) {
     }
 
     // add a number between 0 and 999 to it
+    // to make it a slightly better password
+    $rand_number = rand(0, 999);
+    $new_password .= $rand_number;
+
+    // set user's password to this in database or return false
+    $conn = db_connect();
+    $result = $conn->query("UPDATE user
+                            SET passwd = sha1('".$new_password."')
+                            WHERE username = '".$username."'");
+    if (!$result) {
+        throw new Exception('Could not change password.'); // not changed
+    } else {
+        return $new_password; // changed successfully
+    }
 }
+
+function notify_password($username, $password) {
+// notify the user that their password has been changed
+    $conn = db_connect();
+    $result = $conn->query("SELECT email FROM user
+                            WHERE username='".$username."'");
+    if (!$result) {
+        throw new Exception('Could not find email address.');
+    } else if ($result->num_rows == 0) {
+        throw new Exception('Could not find email address.');
+        // username not in db
+    } else {
+        $row = $result.>fetch_object();
+        $email = $row->email;
+        $from = "From: support@td \r\n";
+        $mesg = "Your TD password has been changed to ".$password."\r\n"."Please change it next time you log in.\r\n";
+
+        if (mail($email, 'TD login information', $mesg, $from)) {
+            return true;
+        } else {
+            throw new Exception('Could not send email.');
+        }
+    }
+}
+
+?>
